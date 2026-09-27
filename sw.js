@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lingtree-v7';
+const CACHE_NAME = 'lingtree-v8';
 const PRECACHE = [
   './index.html',
   './manifest.webmanifest',
