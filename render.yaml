@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: soul-tree-relay
+    runtime: python
+    plan: free
+    buildCommand: ""
+    startCommand: python relay.py

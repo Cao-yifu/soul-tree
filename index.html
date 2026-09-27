@@ -1,0 +1,1287 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>SOUL TREE</title>
+<meta name="theme-color" content="#020D12">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SOUL TREE">
+<link rel="manifest" href="./manifest.webmanifest?v=6">
+<link rel="icon" type="image/png" href="./icons/icon-192.png?v=6">
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png?v=6">
+<style>
+/* ============ SOUL TREE 设计令牌（Codex UI 体系 v1.0） ============ */
+:root{
+  color-scheme: dark;
+  --bg:#020D12; --bg-raised:#04171D; --bg-deep:#01080C;
+  --glass:rgba(6,36,44,.72); --glass-strong:rgba(5,29,36,.88); --glass-soft:rgba(10,75,85,.20);
+  --scrim:rgba(1,8,12,.64);
+  --accent:#20C7C3; --accent-bright:#6FE7E1; --accent-soft:#A9ECE9; --accent-deep:#0A4B55; --accent-muted:#4D8C92;
+  --text:#EAFDFC; --text2:#A9C8CA; --text3:#708F93; --inverse:#021215;
+  --line:rgba(169,236,233,.18); --line-strong:rgba(169,236,233,.34); --line-bright:rgba(111,231,225,.62);
+  --ok:#54D6C6; --warn:#7DB5B4; --danger:#D58B9B;
+  --r-sm:12px; --r-md:18px; --r-lg:24px; --r-xl:32px;
+  --shadow-glass:0 18px 56px rgba(0,0,0,.34);
+  --shadow-action:0 0 0 1px rgba(169,236,233,.26), 0 10px 34px rgba(32,199,195,.24);
+  --glow-orb:0 0 42px rgba(32,199,195,.25);
+  --font-display:'Noto Serif SC','Songti SC','STSong','SimSun',serif;
+  --font:'Noto Sans SC','PingFang SC','HarmonyOS Sans SC','Microsoft YaHei',system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;line-height:1.6;
+  display:flex;justify-content:center;overflow:hidden}
+body::before{content:'';position:fixed;inset:-12%;pointer-events:none;opacity:.42;z-index:0;
+  background:radial-gradient(ellipse at 20% 35%, rgba(13,91,101,.22), transparent 34%),
+             radial-gradient(ellipse at 88% 66%, rgba(32,199,195,.08), transparent 26%);
+  filter:blur(36px);animation:st-drift 12s ease-in-out infinite alternate}
+@keyframes st-drift{to{transform:translate3d(2.5%,-1.5%,0) scale(1.04)}}
+@keyframes st-breathe{50%{transform:scale(1.03);filter:brightness(1.12)}}
+#app{width:100%;max-width:560px;min-height:100dvh;display:flex;flex-direction:column;position:relative;z-index:1;
+  background:
+    radial-gradient(circle at 78% 16%, rgba(32,199,195,.14), transparent 34%),
+    radial-gradient(circle at 18% 82%, rgba(10,75,85,.32), transparent 42%),
+    var(--bg)}
+.scr{flex:1;display:flex;flex-direction:column;min-height:100dvh}
+.hidden{display:none!important}
+
+/* ---------- 顶栏 ---------- */
+.topbar{display:flex;align-items:center;gap:10px;padding:calc(16px + env(safe-area-inset-top)) 18px 10px}
+.tb-ava{width:36px;height:36px;border-radius:50%;cursor:pointer;flex-shrink:0;object-fit:cover;
+  border:1px solid var(--line-strong);background:var(--glass-soft);box-shadow:0 0 18px rgba(32,199,195,.18)}
+.tb-id{flex:1;min-width:0}
+.tb-name{font-weight:600;font-size:15px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
+.tb-sub{font-size:11.5px;color:var(--text3);line-height:1.3}
+.tb-act{width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--glass);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text2);flex-shrink:0;
+  backdrop-filter:blur(24px);transition:border-color .28s, color .28s}
+.tb-act:hover{border-color:var(--line-bright);color:var(--accent-bright)}
+.tb-act svg{width:17px;height:17px}
+
+/* ---------- 页面 ---------- */
+.page{flex:1;display:flex;flex-direction:column;min-height:0;overflow-y:auto;padding:0 24px 16px}
+.page::-webkit-scrollbar{width:5px}.page::-webkit-scrollbar-thumb{background:rgba(169,236,233,.2);border-radius:3px}
+
+/* ---------- 树 ---------- */
+.tree-stage{position:relative;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:320px}
+#treeSvg{width:100%;max-width:430px;height:auto;display:block}
+.tree-status{margin-top:6px;text-align:center;font-size:12.5px;color:var(--text3)}
+.tree-status b{color:var(--accent-bright);font-weight:600}
+.leaf{transition:opacity .5s ease;cursor:pointer}
+@keyframes leafbreathe{0%,100%{opacity:1}50%{opacity:.42}}
+.new{transform-box:fill-box;animation:leafin .7s ease}
+@keyframes leafin{0%{transform:scale(0);transform-origin:center;opacity:0}70%{transform:scale(1.25);transform-origin:center}100%{transform:scale(1);transform-origin:center;opacity:1}}
+.firefly{animation:drift 9s ease-in-out infinite alternate}
+@keyframes drift{from{transform:translate(0,0)}to{transform:translate(6px,-14px)}}
+.pulse-ring{animation:pulse 1.4s ease-out forwards}
+@keyframes pulse{0%{r:3;opacity:.9}100%{r:26;opacity:0}}
+.orb{transform-box:fill-box;transform-origin:center;animation:st-breathe 3.2s ease-in-out infinite}
+.orb.dormant{animation-duration:8s;filter:brightness(.55)}
+
+.miss-row{display:flex;justify-content:center;padding:6px 0 2px}
+.miss-btn{display:inline-flex;align-items:center;gap:7px;min-height:44px;padding:9px 24px;border-radius:999px;cursor:pointer;
+  border:1px solid var(--line-strong);background:var(--glass);color:var(--accent-soft);font-size:14px;font-family:var(--font);
+  backdrop-filter:blur(24px);transition:border-color .28s, box-shadow .28s, color .28s}
+.miss-btn:hover{border-color:var(--line-bright);color:var(--accent-bright);box-shadow:0 0 26px rgba(32,199,195,.28)}
+.miss-btn svg{width:15px;height:15px}
+.miss-btn.burst{animation:missburst 1s ease}
+@keyframes missburst{0%{transform:scale(1)}40%{transform:scale(1.07)}100%{transform:scale(1)}}
+
+/* ---------- 底栏 ---------- */
+.tabbar{display:flex;align-items:flex-end;justify-content:space-around;padding:10px 24px calc(14px + env(safe-area-inset-bottom));
+  border-top:1px solid var(--line);background:var(--glass-strong);
+  backdrop-filter:blur(32px) saturate(125%);position:sticky;bottom:0;z-index:20}
+.tab{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:6px 18px;border-radius:var(--r-md);
+  color:var(--text3);font-size:11.5px;border:1px solid transparent;min-width:64px;transition:color .28s}
+.tab svg{width:22px;height:22px}
+.tab.on{color:var(--accent-bright);font-weight:600;filter:drop-shadow(0 0 10px rgba(111,231,225,.55))}
+.tab-write{background:linear-gradient(135deg,#6FE7E1 0%,#20C7C3 48%,#0A6972 100%);color:var(--inverse)!important;
+  border-radius:999px;padding:13px 26px;font-weight:600;flex-direction:row;gap:6px;font-size:14px;border:none;
+  margin-bottom:14px;min-height:56px;box-shadow:var(--shadow-action)}
+.tab-write:hover{box-shadow:0 0 0 1px rgba(169,236,233,.4), 0 12px 40px rgba(32,199,195,.38)}
+.tab-write svg{width:16px;height:16px}
+
+/* ---------- 回忆列表 ---------- */
+.mem-head{display:flex;align-items:center;gap:8px;padding:6px 0 10px}
+.mem-head h2{font-size:18px;flex:1;font-weight:400;font-family:var(--font-display);letter-spacing:.12em;color:var(--text)}
+.rand-btn{display:inline-flex;align-items:center;gap:5px;min-height:44px;padding:6px 16px;border-radius:999px;border:1px solid var(--line);
+  background:var(--glass);color:var(--text2);font-size:12.5px;cursor:pointer;font-family:var(--font);backdrop-filter:blur(24px)}
+.rand-btn:hover{border-color:var(--line-bright);color:var(--accent-bright)}
+.rand-btn svg{width:14px;height:14px}
+.mem-item{display:flex;gap:11px;padding:14px;background:var(--glass);border:1px solid var(--line);border-radius:var(--r-lg);
+  cursor:pointer;margin-bottom:10px;backdrop-filter:blur(24px);transition:border-color .28s, box-shadow .28s}
+.mem-item:hover{border-color:var(--line-strong);box-shadow:0 6px 26px rgba(2,13,18,.5)}
+.mi-dot{width:34px;height:34px;border-radius:50%;flex-shrink:0;object-fit:cover;border:1px solid var(--line-strong);background:var(--glass-soft)}
+.mi-body{flex:1;min-width:0}
+.mi-top{display:flex;align-items:baseline;gap:8px}
+.mi-name{font-weight:600;font-size:13.5px;color:var(--text)}
+.mi-time{font-size:11.5px;color:var(--text3)}
+.mi-kind{font-size:11px;padding:1px 8px;border-radius:999px;margin-left:auto;flex-shrink:0}
+.k-text{background:rgba(32,199,195,.14);color:var(--accent-soft)}
+.k-photo{background:rgba(84,214,198,.14);color:#A9E6DD}
+.k-voice{background:rgba(111,231,225,.12);color:var(--accent-bright)}
+.k-pulse{background:rgba(111,231,225,.12);color:var(--accent-bright)}
+.mi-txt{font-size:13.5px;color:var(--text2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mi-thumb{width:52px;height:52px;border-radius:10px;object-fit:cover;margin-top:4px;border:1px solid var(--line)}
+.mi-empty{text-align:center;color:var(--text3);padding:60px 20px;font-size:13.5px}
+
+/* ---------- 设置 ---------- */
+.set-group{background:var(--glass);border:1px solid var(--line);border-radius:var(--r-lg);padding:16px;margin-bottom:12px;
+  backdrop-filter:blur(24px)}
+.set-group h3{font-size:13px;color:var(--text3);font-weight:600;margin-bottom:12px;letter-spacing:.08em}
+.set-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.set-row label{width:86px;flex-shrink:0;font-size:13.5px;color:var(--text2)}
+.set-row input{flex:1;min-width:0;padding:9px 12px;border:1px solid var(--line);border-radius:var(--r-sm);font-size:14px;
+  font-family:var(--font);background:var(--glass-soft);color:var(--text);outline:none;min-height:44px}
+.set-row input::placeholder{color:var(--text3)}
+.set-row input:focus{border-color:var(--accent-bright);box-shadow:0 0 0 1px rgba(111,231,225,.3)}
+.set-hint{font-size:11.5px;color:var(--text3);line-height:1.5;margin-top:2px}
+.set-hint.warn{color:var(--danger)}
+.set-hint b{color:var(--accent-soft)}
+.gbtn{display:inline-flex;align-items:center;justify-content:center;gap:6px;width:100%;min-height:48px;padding:10px;border-radius:var(--r-md);
+  border:1px solid var(--line);background:var(--glass);color:var(--text2);font-size:14px;cursor:pointer;font-family:var(--font);margin-top:8px;
+  backdrop-filter:blur(24px);transition:border-color .28s, color .28s}
+.gbtn:hover{border-color:var(--line-bright);color:var(--accent-bright)}
+.gbtn.primary{background:linear-gradient(135deg,#6FE7E1 0%,#20C7C3 48%,#0A6972 100%);color:var(--inverse);
+  border-color:var(--line-bright);font-weight:600;box-shadow:var(--shadow-action)}
+.gbtn.primary:hover{color:var(--inverse);box-shadow:0 0 0 1px rgba(169,236,233,.4), 0 12px 40px rgba(32,199,195,.32)}
+.gbtn svg{width:15px;height:15px}
+
+/* ---------- 头像选择 ---------- */
+.ava-pick{display:flex;gap:10px;flex-wrap:wrap;margin:4px 0 10px}
+.ava-opt{width:52px;height:52px;border-radius:50%;border:1px solid var(--line);cursor:pointer;position:relative;
+  display:flex;align-items:center;justify-content:center;overflow:hidden;padding:0;background:none;transition:border-color .28s, box-shadow .28s}
+.ava-opt:hover{border-color:var(--line-strong)}
+.ava-opt img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.ava-opt.sel{border-color:var(--accent-bright);box-shadow:0 0 18px rgba(32,199,195,.4)}
+.ava-opt svg{width:100%;height:100%}
+.ava-upload{width:52px;height:52px;border-radius:50%;border:1.5px dashed var(--line-strong);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;color:var(--text3);background:none;transition:color .28s, border-color .28s}
+.ava-upload:hover{color:var(--accent-soft);border-color:var(--accent-soft)}
+.ava-upload svg{width:20px;height:20px}
+
+/* ---------- 登录 ---------- */
+.login-wrap{flex:1;display:flex;flex-direction:column;justify-content:center;padding:36px 28px}
+.login-card{background:var(--glass);border:1px solid var(--line);border-radius:var(--r-xl);padding:28px 24px;
+  backdrop-filter:blur(32px) saturate(125%);box-shadow:var(--shadow-glass)}
+.login-logo{display:flex;flex-direction:column;align-items:center;gap:8px;margin-bottom:10px}
+.login-logo img{max-width:300px;height:auto;filter:drop-shadow(0 6px 30px rgba(32,199,195,.3))}
+.login-title{text-align:center;font-size:26px;font-weight:400;color:var(--text);font-family:var(--font-display);letter-spacing:.28em;margin-top:4px}
+.login-sub{text-align:center;font-size:12.5px;color:var(--text2);margin:6px 0 22px}
+.login-name{width:100%;min-height:48px;padding:11px 12px;border:1px solid var(--line);border-radius:var(--r-md);font-size:16px;text-align:center;
+  font-family:var(--font);outline:none;background:var(--glass-soft);color:var(--text)}
+.login-name::placeholder{color:var(--text3)}
+.login-name:focus{border-color:var(--accent-bright)}
+.adv-toggle{text-align:center;font-size:12px;color:var(--text3);cursor:pointer;margin:16px 0 0;transition:color .28s}
+.adv-toggle:hover{color:var(--accent-soft)}
+
+/* ---------- 弹层 ---------- */
+.mask{position:fixed;inset:0;background:var(--scrim);z-index:40;display:flex;align-items:flex-end;justify-content:center;
+  backdrop-filter:blur(4px)}
+.sheet{position:fixed;left:50%;transform:translateX(-50%);bottom:0;width:100%;max-width:560px;background:var(--glass-strong);
+  border-radius:var(--r-xl) var(--r-xl) 0 0;border:1px solid var(--line-strong);border-bottom:none;z-index:50;
+  padding:20px 24px calc(20px + env(safe-area-inset-bottom));
+  max-height:86dvh;overflow-y:auto;backdrop-filter:blur(32px) saturate(125%);box-shadow:var(--shadow-glass)}
+.sheet .ct{font-size:17px;font-weight:400;text-align:center;margin-bottom:16px;color:var(--accent-soft);
+  font-family:var(--font-display);letter-spacing:.16em}
+.compose-ta{width:100%;min-height:110px;padding:12px;border:1px solid var(--line);border-radius:var(--r-md);font-size:15px;
+  font-family:var(--font);resize:none;outline:none;background:var(--glass-soft);color:var(--text)}
+.compose-ta::placeholder{color:var(--text3)}
+.compose-ta:focus{border-color:var(--accent-bright)}
+.compose-prev{margin-top:10px;text-align:center}
+.compose-prev img{max-width:100%;max-height:200px;border-radius:var(--r-md);border:1px solid var(--line-strong)}
+.compose-btns{display:flex;gap:10px;margin-top:14px}
+.cbtn{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;min-height:48px;padding:11px;border-radius:var(--r-md);
+  border:1px solid var(--line);background:var(--glass);font-size:14px;cursor:pointer;font-family:var(--font);color:var(--text2);
+  transition:border-color .28s, color .28s}
+.cbtn:hover{border-color:var(--line-bright);color:var(--accent-bright)}
+.cbtn.primary{background:linear-gradient(135deg,#6FE7E1 0%,#20C7C3 48%,#0A6972 100%);color:var(--inverse);
+  border-color:var(--line-bright);font-weight:600;box-shadow:var(--shadow-action)}
+.cbtn.primary:hover{color:var(--inverse)}
+.cbtn svg{width:16px;height:16px}
+.cbtn.rec{background:rgba(213,139,155,.12);border-color:rgba(213,139,155,.4);color:#E8B4C0}
+.cbtn.rec.recording{background:#D58B9B;color:#021215;border-color:#D58B9B;animation:recblink 1.2s infinite}
+@keyframes recblink{50%{opacity:.55}}
+.rec-time{text-align:center;font-size:12px;color:var(--danger);margin-top:6px}
+
+/* ---------- 记录弹层 ---------- */
+.rec-body{font-size:15px;line-height:1.8;white-space:pre-wrap;color:var(--text);word-break:break-word}
+.rec-img{max-width:100%;border-radius:var(--r-md);margin-top:8px;border:1px solid var(--line-strong)}
+.rec-audio{width:100%;margin-top:8px}
+.rec-meta{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.rec-meta .mi-dot{width:30px;height:30px}
+.rec-meta b{color:var(--text)}
+.rec-meta .mi-time{font-size:12px}
+.rec-close{margin-top:16px}
+.rec-pulse-body{display:flex;flex-direction:column;align-items:center;padding:18px 0;color:var(--accent-soft);font-size:15px}
+.rec-pulse-body svg{width:40px;height:40px;margin-bottom:8px;filter:drop-shadow(0 0 14px rgba(111,231,225,.6))}
+
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:1ms!important;animation-iteration-count:1!important;transition-duration:1ms!important}
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ============ 登录 ============ -->
+  <section class="scr" id="scr-login">
+    <div class="login-wrap">
+      <div class="login-card">
+        <div class="login-logo">
+          <img src="./assets/logo-horizontal.png?v=6" alt="SOUL TREE">
+        </div>
+        <div class="login-title">SOUL TREE</div>
+        <div class="login-sub">让两颗遥远的心，在同一棵树上生长</div>
+        <input class="login-name" id="loginName" maxlength="12" placeholder="你的名字">
+        <div class="ava-pick" id="loginAvas" style="justify-content:center"></div>
+        <input type="file" id="loginPhotoFile" accept="image/*" hidden>
+        <div class="adv-toggle" id="advToggle">＋ 同步设置（两个人相隔两地时用）</div>
+        <div id="advBox" class="hidden" style="margin-top:10px">
+          <div class="set-row"><label>服务器地址</label><input id="loginUrl" placeholder="https://你的服务器:端口"></div>
+          <div class="set-row"><label>房间号</label><input id="loginRoom" placeholder="两个人约定同一个"></div>
+          <div class="set-hint">没有服务器就留空，纯本地使用。两个人相隔两地时：填好地址和房间号，进入后在「设置 → 同步」里线上配对（不用见面换密钥）。</div>
+        </div>
+        <button class="gbtn primary" id="loginGo" style="margin-top:16px">进入</button>
+        <div class="set-hint" style="text-align:center;margin-top:10px">记忆只追加、永不删除 · 一键导出 · 软件可以一直换，记忆永远在</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 主界面 ============ -->
+  <section class="scr hidden" id="scr-main">
+    <header class="topbar">
+      <img class="tb-ava" id="tbAva" alt="我" title="我的名片">
+      <div class="tb-id"><div class="tb-name" id="tbName">我</div><div class="tb-sub" id="tbSub">树龄 0 天</div></div>
+      <button class="tb-act" id="tbSetBtn" title="设置" aria-label="设置">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.6-2-3.4-2.4 1a7 7 0 0 0-2-1.2L14 3h-4l-.5 2.6a7 7 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.6a7 7 0 0 0 0 2.4l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 2 1.2L10 21h4l.5-2.6a7 7 0 0 0 2-1.2l2.4 1 2-3.4-2-1.6c.06-.4.1-.8.1-1.2Z"/></svg>
+      </button>
+      <button class="tb-act" id="tbLogoutBtn" title="退出登录" aria-label="退出登录">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4"/><path d="M15 8l4 4-4 4M19 12H9"/></svg>
+      </button>
+    </header>
+
+    <!-- 树 -->
+    <main class="page" id="page-tree">
+      <div class="tree-stage"><svg id="treeSvg" viewBox="0 0 480 470" aria-label="灵树"></svg></div>
+      <div class="tree-status" id="treeStatus">种下一片叶子，树就会开始生长</div>
+      <div class="miss-row"><button class="miss-btn" id="missBtn">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7.5-4.9-9.7-9.3C.7 8.6 2.4 5 5.7 5c2 0 3.5 1.1 4.3 2.5.3.6.6 1 .8 1.3.2.3.5.5 1.2.5s1-.2 1.2-.5c.2-.3.5-.7.8-1.3C14.8 6.1 16.3 5 18.3 5c3.3 0 5 3.6 3.4 6.7C19.5 16.1 12 21 12 21Z"/></svg>
+        想你了</button></div>
+    </main>
+
+    <!-- 回忆 -->
+    <main class="page hidden" id="page-mem">
+      <div class="mem-head">
+        <h2>回忆</h2>
+        <button class="rand-btn" id="randBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M18 4l3 3-3 3M21 7H8a5 5 0 0 0 0 10h9"/></svg>
+          随机一片叶子</button>
+      </div>
+      <div id="memList"></div>
+    </main>
+
+    <!-- 设置 -->
+    <main class="page hidden" id="page-set">
+      <div class="set-group">
+        <h3>我</h3>
+        <div class="set-row"><label>名字</label><input id="setName" maxlength="12"></div>
+        <div class="ava-pick" id="setAvas"></div>
+        <input type="file" id="setPhotoFile" accept="image/*" hidden>
+        <div class="set-hint">改动立即生效。可选两个预设头像，或上传自己的照片。</div>
+      </div>
+      <div class="set-group">
+        <h3>同步（可选，线上配对）</h3>
+        <div class="set-row"><label>服务器地址</label><input id="setUrl" placeholder="留空 = 纯本地"></div>
+        <div class="set-row"><label>房间号</label><input id="setRoom" placeholder="两个人约定同一个"></div>
+        <div class="set-hint" id="pairStatus">未配对。</div>
+        <div id="pairArea"></div>
+        <div class="set-hint" id="syncHint">未配置。纯本地模式下，用「导出记忆」把文件发给对方。</div>
+        <button class="gbtn" id="syncNowBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-2.6-6.3M21 3v6h-6"/></svg>
+          立即同步一次</button>
+      </div>
+      <div class="set-group">
+        <h3>记忆（永远不丢）</h3>
+        <button class="gbtn" id="exportBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+          导出全部记忆（一个文件，含照片声音）</button>
+        <button class="gbtn" id="importBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 21V9m0 0l-4 4m4-4l4 4M4 7V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2"/></svg>
+          导入记忆文件（只会补充，不会覆盖或删除）</button>
+        <input type="file" id="importFile" accept=".json,application/json" hidden>
+        <div class="set-hint" id="exportHint">还没导出过。建议定期导出，存到自己的云盘或硬盘。</div>
+      </div>
+      <div class="set-group">
+        <h3>关于</h3>
+        <div class="set-hint">灵树 v0.1 · 记录只追加、永不删除 · 不推送、无红点，打开树才看见新叶子 · 树会冬眠，不会死。以后想加什么功能都可以加，但记忆的格式永远不变。</div>
+      </div>
+      <button class="gbtn" id="logoutBtn">退出登录</button>
+      <div style="height:8px"></div>
+    </main>
+
+    <!-- 底栏 -->
+    <nav class="tabbar">
+      <div class="tab on" data-page="page-tree">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 21V9"/><path d="M12 13C7 13 3.5 9.5 3.5 5.5C3.5 3.5 5.5 2.5 12 2.5C18.5 2.5 20.5 3.5 20.5 5.5C20.5 9.5 17 13 12 13Z"/></svg>
+        树
+      </div>
+      <div class="tab tab-write" id="writeBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        写
+      </div>
+      <div class="tab" data-page="page-mem">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 4a8 8 0 0 0-8 8v8h6v-9H3.6"/><path d="M12 4a8 8 0 0 1 8 8v8h-6v-9h6.4"/></svg>
+        回忆
+      </div>
+    </nav>
+  </section>
+</div>
+
+<!-- ============ 写 ============ -->
+<div class="mask hidden" id="maskCompose"></div>
+<div class="sheet hidden" id="sheetCompose">
+  <div class="ct">写下一片叶子</div>
+  <textarea class="compose-ta" id="composeText" placeholder="这一刻，想被记住的……"></textarea>
+  <div class="compose-prev hidden" id="composePrev"><img id="composeImg" alt="预览"></div>
+  <div class="compose-btns">
+    <button class="cbtn" id="photoBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="6" width="18" height="14" rx="2"/><circle cx="12" cy="13" r="3.4"/><path d="M8 6l1.2-2h5.6L16 6"/></svg>
+      照片</button>
+    <button class="cbtn rec" id="voiceBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+      <span id="voiceBtnTxt">声音</span></button>
+    <button class="cbtn primary" id="saveBtn">放下</button>
+  </div>
+  <div class="rec-time hidden" id="recTime"></div>
+  <input type="file" id="photoFile" accept="image/*" hidden>
+</div>
+
+<!-- ============ 看一片叶子 ============ -->
+<div class="mask hidden" id="maskRec"></div>
+<div class="sheet hidden" id="sheetRec">
+  <div class="ct" id="recTitle">一片叶子</div>
+  <div class="rec-meta">
+    <img class="mi-dot" id="recAva" alt="">
+    <div><b id="recName" style="font-size:14px">我</b><br><span class="mi-time" id="recTime">—</span></div>
+  </div>
+  <div id="recBody"></div>
+  <button class="gbtn rec-close" id="recClose">合上这片叶子</button>
+</div>
+
+<script>
+'use strict';
+/* ============ 灵树 v0.1 ============
+   记忆模型：records = [{id,t,kind,body,media,dur,from}]  只追加，永不修改/删除
+   kind: text | photo | voice | pulse      from: me | partner
+   =================================== */
+const APP = 'lingtree';          // 存档键：不带版本号，未来所有版本共用（迁移铁律）
+const LEGACY_KEYS = ['lingtree.v1'];
+const DB_NAME = 'lingtree';      // 数据库名：不带版本号
+const DB_STORE = 'records';
+const DAY = 86400000;
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtT = t => { const d = new Date(t); const p = n => String(n).padStart(2,'0');
+  return d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日 '+p(d.getHours())+':'+p(d.getMinutes()); };
+const shortT = t => { const d = new Date(t); const p = n => String(n).padStart(2,'0');
+  return (d.getMonth()+1)+'月'+d.getDate()+'日 '+p(d.getHours())+':'+p(d.getMinutes()); };
+const agoDays = t => Math.floor((Date.now() - t) / DAY);
+function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a);
+  t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+function hashStr(s){ let h=2166136261; for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); }
+  return h>>>0; }
+
+/* ---------- 状态 ---------- */
+const DEF = {
+  identity: { name:'', ava:'assets/avatar-1.png' },
+  sync: { url:'', room:'', role:'', myPriv:'', myPub:'', peerPub:'', paired:false },
+  seed: Math.floor(Math.random()*1e9),
+  lastExport: 0,
+  lastPullTs: 0,
+  lastPushTs: 0,
+  lastPulse: 0
+};
+let S = {};
+let records = [];   // 内存镜像，按 t 升序
+let db = null;
+
+/* ---------- IndexedDB：只追加 ---------- */
+function idbOpen(name){
+  return new Promise((res, rej) => {
+    const rq = indexedDB.open(name, 1);
+    rq.onupgradeneeded = e => {
+      const d = e.target.result;
+      if(!d.objectStoreNames.contains(DB_STORE)) d.createObjectStore(DB_STORE, { keyPath:'id' });
+    };
+    rq.onsuccess = () => res(rq.result);
+    rq.onerror = () => rej(rq.error);
+  });
+}
+function dbOpen(){ return idbOpen(DB_NAME); }
+function idbAll(dbInst){
+  return new Promise((res, rej) => {
+    if(!dbInst.objectStoreNames.contains(DB_STORE)) return res([]);
+    const tx = dbInst.transaction(DB_STORE,'readonly');
+    const rq = tx.objectStore(DB_STORE).getAll();
+    rq.onsuccess = () => res(rq.result || []);
+    rq.onerror = () => rej(rq.error);
+  });
+}
+function dbAdd(rec){
+  if(!db) return Promise.resolve();
+  return new Promise((res, rej) => {
+    const tx = db.transaction('records','readwrite');
+    tx.objectStore('records').put(rec);
+    tx.oncomplete = () => res();
+    tx.onerror = () => rej(tx.error);
+  });
+}
+function dbAll(){
+  if(!db) return Promise.resolve([]);
+  return idbAll(db);
+}
+function dbPutBatch(list){
+  if(!db) return Promise.resolve();
+  return new Promise((res, rej) => {
+    if(!list.length) return res();
+    const tx = db.transaction('records','readwrite');
+    const st = tx.objectStore('records');
+    list.forEach(r => st.put(r));
+    tx.oncomplete = () => res();
+    tx.onerror = () => rej(tx.error);
+  });
+}
+
+/* ---------- 记忆操作（只追加） ---------- */
+function saveState(){ localStorage.setItem(APP, JSON.stringify(S)); }
+function loadState(){
+  try{ S = Object.assign(JSON.parse(JSON.stringify(DEF)), JSON.parse(localStorage.getItem(APP) || '{}')); }
+  catch(e){ S = JSON.parse(JSON.stringify(DEF)); }
+}
+/* 更新版本后自动读取旧存档：把旧格式原样搬进新库，一条不丢 */
+async function migrateLegacy(){
+  // 1. localStorage：旧键 → 新键
+  try{
+    for(const k of LEGACY_KEYS){
+      if(localStorage.getItem(APP) === null && localStorage.getItem(k) !== null){
+        localStorage.setItem(APP, localStorage.getItem(k));
+        localStorage.removeItem(k);
+        loadState();
+        break;
+      }
+    }
+  }catch(e){}
+  // 2. IndexedDB：旧库 → 新库（只追加合并，然后才删旧库）
+  if(typeof indexedDB === 'undefined') return;
+  for(const legacy of LEGACY_KEYS){
+    try{
+      const old = await new Promise((res, rej) => {
+        const rq = indexedDB.open(legacy, 1);
+        rq.onupgradeneeded = e => {
+          const d = e.target.result;
+          if(!d.objectStoreNames.contains('records')) d.createObjectStore('records', { keyPath:'id' });
+        };
+        rq.onsuccess = () => res(rq.result);
+        rq.onerror = () => rej(rq.error);
+      });
+      const oldRecs = await idbAll(old);
+      if(oldRecs.length){
+        await dbPutBatch(oldRecs);
+      }
+      old.close();
+      indexedDB.deleteDatabase(legacy);
+    }catch(e){ /* 旧库不存在或打不开：跳过 */ }
+  }
+}
+function newId(){ return 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+async function appendRecord(r){
+  records.push(r);
+  await dbAdd(r);
+}
+async function importRecords(list){
+  const have = new Set(records.map(r => r.id));
+  const fresh = list.filter(r => r && r.id && !have.has(r.id));
+  if(fresh.length){ records = records.concat(fresh).sort((a,b) => a.t < b.t ? -1 : 1); await dbPutBatch(fresh); }
+  return fresh.length;
+}
+
+/* ---------- 身份 ---------- */
+const PRESET_AVAS = ['assets/avatar-1.png', 'assets/avatar-2.png'];
+function avaPhoto(ava){
+  if(ava && typeof ava === 'object' && ava.photo) return ava.photo;
+  if(PRESET_AVAS.indexOf(ava) >= 0) return ava;
+  return null;
+}
+function fallbackAvaSrc(){
+  const svg = '<svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="32" fill="#0A4B55"/><circle cx="32" cy="26" r="11" fill="#FFF" opacity=".92"/><path d="M14 52c4-9 10-13.5 18-13.5S46 43 50 52v10H14Z" fill="#FFF" opacity=".92"/></svg>';
+  return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+}
+function renderAvaPick(container, sel, onPick){
+  container.innerHTML = '';
+  PRESET_AVAS.forEach((src, i) => {
+    const b = document.createElement('button');
+    b.className = 'ava-opt' + (sel === src ? ' sel' : '');
+    b.setAttribute('aria-label', '头像' + (i+1));
+    b.innerHTML = '<img src="' + src + '" alt="头像' + (i+1) + '">';
+    b.onclick = () => { container.querySelectorAll('.ava-opt').forEach(o => o.classList.remove('sel')); b.classList.add('sel'); onPick(src); };
+    container.appendChild(b);
+  });
+  const up = document.createElement('button');
+  up.className = 'ava-upload';
+  up.title = '上传照片';
+  up.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 16V4m0 0L8 8m4-4l4 4M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>';
+  up.onclick = () => up._file.click();
+  up._file = document.createElement('input');
+  up._file.type = 'file'; up._file.accept = 'image/*'; up._file.hidden = true;
+  up._file.onchange = () => { const f = up._file.files[0]; if(!f) return; shrinkImg(f, 256, dataUrl => onPick({photo:dataUrl})); };
+  container.appendChild(up);
+}
+function shrinkImg(file, maxSide, cb){
+  const fr = new FileReader();
+  fr.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      const sc = Math.min(1, maxSide / Math.max(img.width, img.height));
+      const cv = document.createElement('canvas');
+      cv.width = Math.round(img.width * sc); cv.height = Math.round(img.height * sc);
+      cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+      cb(cv.toDataURL('image/jpeg', .8));
+    };
+    img.src = fr.result;
+  };
+  fr.readAsDataURL(file);
+}
+
+/* ---------- 登录 ---------- */
+function showLogin(){
+  $('#scr-main').classList.add('hidden');
+  $('#scr-login').classList.remove('hidden');
+  $('#loginName').value = S.identity.name || '';
+  renderAvaPick($('#loginAvas'), S.identity.ava, a => { S.identity.ava = a; });
+  $('#loginUrl').value = S.sync.url; $('#loginRoom').value = S.sync.room;
+}
+function doLogin(){
+  const name = $('#loginName').value.trim();
+  if(!name){ $('#loginName').focus(); $('#loginName').style.borderColor = '#A4552F'; return; }
+  S.identity.name = name;
+  S.sync.url = $('#loginUrl').value.trim();
+  S.sync.room = $('#loginRoom').value.trim();
+  S.lastPullTs = 0;
+  saveState();
+  $('#scr-login').classList.add('hidden');
+  $('#scr-main').classList.remove('hidden');
+  applyIdentity(); renderTree(); renderMems(); syncConfigured();
+}
+function logout(){
+  saveState();
+  $('#page-set').classList.add('hidden'); $('#page-tree').classList.remove('hidden');
+  setTab('page-tree');
+  showLogin();
+}
+function applyIdentity(){
+  $('#tbName').textContent = S.identity.name || '我';
+  $('#tbAva').src = avaPhoto(S.identity.ava) || fallbackAvaSrc();
+  $('#tbAva').style.display = '';
+}
+/* ::JS1:: */
+/* ============ 树的绘制 ============ */
+const NS = 'http://www.w3.org/2000/svg';
+let treeSites = [];   // 叶位 [{x,y,a}]，由共享种子确定 → 两台设备画同一棵树
+const LEAF_KIND_COLOR = { text:'#A9ECE9', photo:'#6FE7E1', voice:'#54D6C6', pulse:'#6FE7E1' };
+
+function buildTreeSites(){
+  const seed = S.sync.room ? hashStr('lingtree-' + S.sync.room) : S.seed;
+  const rnd = mulberry32(seed);
+  treeSites = [];
+  const stack = [{ x:240, y:462, a:-Math.PI/2, len:104, w:13, d:0 }];
+  while(stack.length){
+    const b = stack.pop();
+    const x2 = b.x + Math.cos(b.a) * b.len, y2 = b.y + Math.sin(b.a) * b.len;
+    if(b.d === 0){ drawBranch(x2, y2, b); }
+    if(b.d >= 6 || b.len < 15){ treeSites.push({ x:x2, y:y2, a:b.a }); continue; }
+    const n = b.d < 2 ? 3 : 2;
+    for(let i = 0; i < n; i++){
+      const spread = (i - (n-1)/2) * (0.42 + rnd()*0.28);
+      const na = b.a + spread;
+      const len = b.len * (0.68 + rnd()*0.12);
+      stack.push({ x:x2, y:y2, a:na, len, w:Math.max(1.5, b.w*0.62), d:b.d+1 });
+    }
+  }
+}
+let lastTrunk = null;
+function drawBranch(x, y, b){
+  if(lastTrunk) return; // 只画主干一次（占位）
+}
+function kindColor(r){ return LEAF_KIND_COLOR[r.kind] || '#4E7A55'; }
+
+function renderTree(newLeafId){
+  const svg = $('#treeSvg');
+  svg.innerHTML = '';
+  buildTreeSites();
+  const winter = isWinter();
+  const leafRecs = records.filter(r => r.kind !== 'pulse');
+  const pulses = records.filter(r => r.kind === 'pulse');
+  const maxLeaves = treeSites.length;
+  const shown = leafRecs.slice(-maxLeaves);
+  const hiddenCount = leafRecs.length - shown.length;
+
+  // 灵魂之核光球渐变
+  const defs = mkEl('defs', {});
+  const grad = mkEl('radialGradient', { id:'orbGrad', cx:'35%', cy:'28%', r:'80%' });
+  [['0%','rgba(234,253,252,.85)'],['22%','rgba(32,199,195,.5)'],['52%','rgba(10,75,85,.42)'],['100%','rgba(2,13,18,.28)']].forEach(([o,c]) => {
+    grad.appendChild(mkEl('stop', { offset:o, 'stop-color':c }));
+  });
+  defs.appendChild(grad);
+  svg.appendChild(defs);
+
+  // 主干：墨色青黑，两笔叠加出体积
+  svg.appendChild(mkEl('path', { d:'M240 462 C238 380 234 300 240 210', stroke:'#13444D', 'stroke-width':'15', fill:'none', 'stroke-linecap':'round', opacity:'.9' }));
+  svg.appendChild(mkEl('path', { d:'M240 462 C246 380 250 300 240 210', stroke:'#1F6A74', 'stroke-width':'10', fill:'none', 'stroke-linecap':'round', opacity:'.4' }));
+
+  // 枝条：半透明青丝带
+  const drawn = new Set();
+  shown.forEach((r, i) => {
+    const st = treeSites[i % maxLeaves];
+    if(drawn.has(st)) return; drawn.add(st);
+    const cx = 240, cy = 210;
+    const p1x = cx + (st.x - cx) * 0.25, p1y = cy + (st.y - cy) * 0.35;
+    svg.appendChild(mkEl('path', { d:`M${cx} ${cy} Q${p1x} ${p1y} ${st.x} ${st.y}`,
+      stroke:'rgba(111,231,225,.28)', 'stroke-width':1.6, fill:'none', opacity: winter ? .5 : .8, 'stroke-linecap':'round' }));
+  });
+  // 树冠雾
+  svg.appendChild(mkEl('ellipse', { cx:240, cy:210, rx:150, ry:110, fill: winter ? 'rgba(10,75,85,.14)' : 'rgba(10,75,85,.30)', opacity:'.8', style:'filter:blur(18px)' }));
+
+  // 灵魂之核：呼吸光球（connected / seed / dormant）
+  const hasRec = leafRecs.length > 0;
+  svg.appendChild(mkEl('circle', { cx:240, cy: hasRec ? 212 : 250, r: hasRec ? (winter ? 20 : 24) : 12,
+    fill:'url(#orbGrad)', class:'orb' + (winter ? ' dormant' : ''), opacity: hasRec ? '.95' : '.55' }));
+
+  // 叶片 = 灵魂之叶（叶片形 + 同色光晕 + 呼吸闪烁）
+  const bySite = new Map();
+  shown.forEach((r, i) => {
+    const st = treeSites[i % maxLeaves];
+    const key = st.x + ',' + st.y;
+    const arr = bySite.get(key) || (bySite.set(key, []), bySite.get(key));
+    arr.push(r);
+  });
+  bySite.forEach((arr, key) => {
+    const [sx, sy] = key.split(',').map(Number);
+    const st = treeSites.find(p => p.x === sx && p.y === sy) || { x:sx, y:sy, a:0 };
+    arr.forEach((r, k) => {
+      const off = arr.length > 1 ? (k - (arr.length-1)/2) * 5 : 0;
+      const lx = st.x + Math.cos(st.a + Math.PI/2) * off, ly = st.y + Math.sin(st.a + Math.PI/2) * off;
+      const col = winter ? '#4D8C92' : kindColor(r);
+      const rot = st.a * 180 / Math.PI + 90;
+      const sd = hashStr(r.id);
+      const dur = (winter ? 4.8 : 2.8) + (sd % 5) * 0.7;
+      const delay = (sd % 37) / 9;
+      const g = mkEl('g', { class:'leaf', transform:'translate(' + lx + ' ' + ly + ') rotate(' + rot + ')',
+        style:'animation: leafbreathe ' + dur + 's ease-in-out ' + (-delay) + 's infinite' });
+      g.appendChild(mkEl('circle', { cx:0, cy:-2, r:9, fill:col, opacity: winter ? '.10' : '.18' }));
+      const leafP = mkEl('path', {
+        d:'M0 4.5 C3.4 1.4 6.6 -3.6 0 -13 C-6.6 -3.6 -3.4 1.4 0 4.5 Z',
+        fill:col, opacity:'.95', class: r.id === newLeafId ? 'new' : ''
+      });
+      if(r.from === 'partner'){ leafP.setAttribute('stroke','#EAFDFC'); leafP.setAttribute('stroke-width','.7'); leafP.setAttribute('stroke-opacity','.7'); }
+      g.appendChild(mkEl('path', { d:'M0 2.5 L0 -8.5', stroke:'rgba(2,13,18,.3)', 'stroke-width':'.6', fill:'none' }));
+      leafP._rec = r;
+      leafP.addEventListener('click', () => openRec(r));
+      const title = mkEl('title', {}); title.textContent = shortT(r.t) + ' · ' + (r.kind === 'text' ? (r.body || '').slice(0, 18) : r.kind === 'photo' ? '一张照片' : r.kind === 'voice' ? '一段声音' : '想你了');
+      g.appendChild(title);
+      g.appendChild(leafP);
+      svg.appendChild(g);
+    });
+  });
+
+  // 空树：一株会呼吸的小苗
+  if(!shown.length){
+    svg.appendChild(mkEl('path', { d:'M240 462 C239 420 238 390 240 356', stroke:'#1F6A74', 'stroke-width':'5', fill:'none', 'stroke-linecap':'round', opacity:'.8' }));
+    [[234,352,-1],[247,348,1]].forEach(([x,y,dir]) => {
+      svg.appendChild(mkEl('path', { d:`M${x} ${y} q${dir*9} -14 ${dir*20} -18 q${dir*-11} -2 ${dir*-19} 6 q4 10 12 12Z`, fill:'#4D8C92' }));
+    });
+  }
+
+  // 冬眠：雪
+  if(winter){
+    const rnd = mulberry32(77);
+    for(let i = 0; i < 26; i++){
+      svg.appendChild(mkEl('circle', { cx: 60 + rnd()*360, cy: 380 + rnd()*84, r: 1.2 + rnd()*1.6, fill:'#FFFFFF', opacity: .4 + rnd()*.4 }));
+    }
+    svg.appendChild(mkEl('path', { d:'M70 462 Q150 420 240 440 Q330 458 410 432 L410 470 L70 470Z', fill:'#03131A', opacity:'.8' }));
+  }
+
+  // 萤火虫（想你了）
+  const fireflyCount = Math.min(6, 2 + pulses.length);
+  const frnd = mulberry32(hashStr('firefly' + (S.sync.room || S.seed)));
+  for(let i = 0; i < fireflyCount; i++){
+    const fx = 150 + frnd()*180, fy = 120 + frnd()*230;
+    svg.appendChild(mkEl('circle', { cx:fx, cy:fy, r:7, fill:'#20C7C3', opacity:'.16' }));
+    svg.appendChild(mkEl('circle', { cx:fx, cy:fy, r:2.1, fill:'#A9ECE9', class:'firefly', style:`animation-delay:-${i*1.7}s` }));
+  }
+
+  // 想你了光环
+  if(Date.now() - S.lastPulse < 4000){
+    svg.appendChild(mkEl('circle', { cx:240, cy:230, r:3, fill:'none', stroke:'#6FE7E1', 'stroke-width':'2', class:'pulse-ring' }));
+  }
+
+  $('#treeStatus').innerHTML = statusLine(leafRecs.length, pulses.length, winter, hiddenCount);
+  const age = leafRecs.length ? Math.max(1, agoDays(records[0].t) + 1) : 0;
+  $('#tbSub').textContent = age ? '树龄 ' + age + ' 天' : '种下一片叶子吧';
+}
+function mkEl(tag, attrs){
+  const el = document.createElementNS(NS, tag);
+  for(const k in attrs) el.setAttribute(k, attrs[k]);
+  return el;
+}
+function isWinter(){ return records.length === 0 ? false : agoDays(records[records.length-1].t) >= 5; }
+function statusLine(leafN, pulseN, winter, hidden){
+  if(!leafN) return '写下第一片叶子，树就会开始生长';
+  const age = Math.max(1, agoDays(records[0].t) + 1);
+  let s = '树龄 <b>' + age + '</b> 天 · <b>' + leafN + '</b> 片叶子' + (pulseN ? ' · 萤火虫 <b>' + pulseN + '</b> 只' : '');
+  if(hidden > 0) s += ' · 还有 ' + hidden + ' 片藏在深处（在回忆里看）';
+  if(winter) s += ' · <b>树在冬眠</b>，雪落无声';
+  return s;
+}
+
+/* ============ 回忆列表 ============ */
+function renderMems(){
+  const box = $('#memList');
+  const list = records.slice().reverse();
+  if(!list.length){
+    box.innerHTML = '<div class="mi-empty">还没有记录。回到「树」，写下第一片叶子。</div>';
+    return;
+  }
+  box.innerHTML = list.map(r => {
+    const kindLabel = { text:'文字', photo:'照片', voice:'声音', pulse:'想你了' }[r.kind] || '';
+    const body = r.kind === 'text' ? esc(r.body || '') : r.kind === 'photo' ? '<img class="mi-thumb" src="' + r.media + '" alt="">' : r.kind === 'voice' ? '一段 ' + (r.dur || 0) + ' 秒的声音' : '想你了';
+    return '<div class="mem-item" data-id="' + r.id + '">' +
+      '<img class="mi-dot" alt="" ' + (r.from === 'me' ? 'src="' + (avaPhoto(S.identity.ava) || fallbackAvaSrc()) + '"' : 'data-preset="#2E6E75"') + '>' +
+      '<div class="mi-body"><div class="mi-top"><span class="mi-name">' + (r.from === 'me' ? esc(S.identity.name || '我') : 'TA') + '</span>' +
+      '<span class="mi-time">' + shortT(r.t) + '</span><span class="mi-kind k-' + r.kind + '">' + kindLabel + '</span></div>' +
+      '<div class="mi-txt">' + body + '</div></div></div>';
+  }).join('');
+  box.querySelectorAll('.mem-item').forEach(el => {
+    el.onclick = () => openRec(records.find(r => r.id === el.dataset.id));
+  });
+  box.querySelectorAll('.mi-dot[data-preset]').forEach(img => {
+    const svg = '<svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="32" fill="'+img.dataset.preset+'"/><circle cx="32" cy="26" r="11" fill="#FFF" opacity=".92"/><path d="M14 52c4-9 10-13.5 18-13.5S46 43 50 52v10H14Z" fill="#FFF" opacity=".92"/></svg>';
+    img.src = 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+  });
+}
+
+/* ============ 看一片叶子 ============ */
+function openRec(r){
+  if(!r) return;
+  $('#recTitle').textContent = r.kind === 'pulse' ? '想你了' : '一片叶子';
+  $('#recName').textContent = r.from === 'me' ? (S.identity.name || '我') : 'TA';
+  $('#recTime').textContent = fmtT(r.t);
+  const ava = $('#recAva');
+  if(r.from === 'me'){
+    ava.removeAttribute('data-preset');
+    ava.src = avaPhoto(S.identity.ava) || fallbackAvaSrc();
+  }
+  else {
+    ava.setAttribute('data-preset', '#2E6E75'); ava.removeAttribute('src');
+    const svg2 = '<svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="32" fill="#2E6E75"/><circle cx="32" cy="26" r="11" fill="#FFF" opacity=".92"/><path d="M14 52c4-9 10-13.5 18-13.5S46 43 50 52v10H14Z" fill="#FFF" opacity=".92"/></svg>';
+    ava.src = 'data:image/svg+xml;utf8,' + encodeURIComponent(svg2);
+  }
+  const b = $('#recBody');
+  if(r.kind === 'text') b.innerHTML = '<div class="rec-body">' + esc(r.body || '') + '</div>';
+  else if(r.kind === 'photo') b.innerHTML = '<img class="rec-img" src="' + r.media + '" alt="">' + (r.body ? '<div class="rec-body" style="margin-top:10px">' + esc(r.body) + '</div>' : '');
+  else if(r.kind === 'voice') b.innerHTML = '<audio class="rec-audio" controls src="' + r.media + '"></audio>' + (r.body ? '<div class="rec-body" style="margin-top:10px">' + esc(r.body) + '</div>' : '');
+  else b.innerHTML = '<div class="rec-pulse-body"><svg viewBox="0 0 24 24" fill="#C9A227"><path d="M12 21s-7.5-4.9-9.7-9.3C.7 8.6 2.4 5 5.7 5c2 0 3.5 1.1 4.3 2.5.3.6.6 1 .8 1.3.2.3.5.5 1.2.5s1-.2 1.2-.5c.2-.3.5-.7.8-1.3C14.8 6.1 16.3 5 18.3 5c3.3 0 5 3.6 3.4 6.7C19.5 16.1 12 21 12 21Z"/></svg>这一刻，很想你</div>' + (r.body ? '<div class="rec-body">' + esc(r.body) + '</div>' : '');
+  $('#maskRec').classList.remove('hidden');
+  $('#sheetRec').classList.remove('hidden');
+}
+
+/* ============ 写一片叶子 ============ */
+let pendingPhoto = null, recStream = null, recTimer = null, recStart = 0, recBlob = null;
+function openCompose(){
+  $('#composeText').value = '';
+  pendingPhoto = null; recBlob = null;
+  $('#composePrev').classList.add('hidden');
+  $('#composeImg').removeAttribute('src');
+  $('#voiceBtnTxt').textContent = '声音';
+  $('#voiceBtn').classList.remove('recording');
+  stopRec();
+  $('#maskCompose').classList.remove('hidden');
+  $('#sheetCompose').classList.remove('hidden');
+  setTimeout(() => $('#composeText').focus(), 60);
+}
+function closeCompose(){
+  stopRec();
+  $('#maskCompose').classList.add('hidden');
+  $('#sheetCompose').classList.add('hidden');
+}
+function stopRec(){
+  if(recStream){ recStream.getTracks().forEach(t => t.stop()); recStream = null; }
+  if(recTimer){ clearInterval(recTimer); recTimer = null; }
+  $('#recTime').classList.add('hidden');
+}
+async function toggleVoice(){
+  if(recStream){ // 结束录音
+    $('#voiceBtn').classList.remove('recording');
+    if(window._mr && window._mr.state !== 'inactive') window._mr.stop();
+    stopRec();
+    $('#voiceBtnTxt').textContent = '已录好，再点重录';
+    return;
+  }
+  if(!window.MediaRecorder || !navigator.mediaDevices){ alert('当前环境不支持录音（需要 Chrome/Edge，且页面走 http 或 https）'); return; }
+  try{
+    recStream = await navigator.mediaDevices.getUserMedia({ audio:true });
+    recBlob = null;
+    const chunks = [];
+    const mr = new MediaRecorder(recStream);
+    mr.ondataavailable = e => { if(e.data.size) chunks.push(e.data); };
+    mr.onstop = () => {
+      recBlob = new Blob(chunks, { type: mr.mimeType || 'audio/webm' });
+      $('#voiceBtnTxt').textContent = '已录 ' + Math.round((Date.now() - recStart)/1000) + ' 秒，再点重录';
+    };
+    mr.start();
+    recStart = Date.now();
+    recTimer = setInterval(() => {
+      const s = Math.floor((Date.now() - recStart)/1000);
+      $('#recTime').textContent = '录音中 ' + s + ' 秒（最长 60 秒）';
+      $('#recTime').classList.remove('hidden');
+      if(s >= 60) toggleVoice();
+    }, 500);
+    $('#voiceBtn').classList.add('recording');
+    $('#voiceBtnTxt').textContent = '点一下结束';
+    window._mr = mr;
+  }catch(e){
+    alert('没有拿到麦克风权限：' + e.message);
+  }
+}
+function blobToDataUrl(blob){
+  return new Promise((res, rej) => {
+    const fr = new FileReader();
+    fr.onload = () => res(fr.result);
+    fr.onerror = () => rej(fr.error);
+    fr.readAsDataURL(blob);
+  });
+}
+async function doSave(){
+  const txt = $('#composeText').value.trim();
+  let kind = 'text', media = null, dur = 0;
+  if(recBlob){ kind = 'voice'; media = await blobToDataUrl(recBlob); dur = Math.round((Date.now() - recStart)/1000); }
+  else if(pendingPhoto){ kind = 'photo'; media = pendingPhoto; }
+  if(!txt && !media){ $('#composeText').focus(); return; }
+  const r = { v:1, id:newId(), t:Date.now(), kind, body:txt, media, dur, from:'me' };
+  await appendRecord(r);
+  closeCompose();
+  renderTree(r.id);
+  renderMems();
+  pushToRelay();
+}
+async function sendPulse(){
+  const r = { v:1, id:newId(), t:Date.now(), kind:'pulse', body:'', media:null, dur:0, from:'me' };
+  await appendRecord(r);
+  S.lastPulse = Date.now(); saveState();
+  const btn = $('#missBtn');
+  btn.classList.remove('burst'); void btn.offsetWidth; btn.classList.add('burst');
+  renderTree(r.id);
+  renderMems();
+  pushToRelay();
+}
+/* ::JS2:: */
+/* ============ 导出 / 导入：记忆永远不丢 ============ */
+function buildExport(){
+  return JSON.stringify({
+    app:'lingtree', v:1, exportedAt:new Date().toISOString(),
+    identity:S.identity, seed:S.seed,
+    records:records
+  }, null, 2);
+}
+function doExport(){
+  const d = new Date(); const p = n => String(n).padStart(2,'0');
+  const name = '灵树记忆-' + d.getFullYear() + p(d.getMonth()+1) + p(d.getDate()) + '.json';
+  const blob = new Blob([buildExport()], { type:'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+  S.lastExport = Date.now(); saveState(); exportHint();
+}
+function doImport(file){
+  const fr = new FileReader();
+  fr.onload = async () => {
+    try{
+      const data = JSON.parse(fr.result);
+      if(data.app !== 'lingtree' || !Array.isArray(data.records)){ alert('这不是灵树的记忆文件'); return; }
+      const n = await importRecords(data.records);
+      if(data.seed && !S.sync.room){ S.seed = data.seed; saveState(); }
+      renderTree(); renderMems();
+      alert('导入完成：新增 ' + n + ' 条记忆（原有的都还在，只补充、不覆盖）');
+    }catch(e){ alert('文件解析失败：' + e.message); }
+  };
+  fr.readAsText(file);
+}
+function exportHint(){
+  const el = $('#exportHint');
+  if(!S.lastExport){ el.textContent = '还没导出过。建议定期导出，存到自己的云盘或硬盘。'; el.className = 'set-hint'; return; }
+  const d = agoDays(S.lastExport);
+  el.textContent = '上次导出：' + fmtT(S.lastExport) + '（' + d + ' 天前）';
+  el.className = 'set-hint' + (d >= 30 ? ' warn' : '');
+}
+
+/* ============ 线上配对：ECDH 公钥交换 + 指纹电话核对 ============ */
+const B64 = { e:b => btoa(String.fromCharCode(...new Uint8Array(b))), d:s => Uint8Array.from(atob(s), c => c.charCodeAt(0)) };
+const ENC = new TextEncoder(), DEC = new TextDecoder();
+let syncKey = null, syncFp = '';
+function b64ToBuf(b){ return Uint8Array.from(atob(b), c => c.charCodeAt(0)).buffer; }
+function bufToB64(buf){ return btoa(String.fromCharCode(...new Uint8Array(buf))); }
+async function genPair(){
+  const kp = await crypto.subtle.generateKey({ name:'ECDH', namedCurve:'P-256' }, true, ['deriveBits']);
+  const priv = await crypto.subtle.exportKey('pkcs8', kp.privateKey);
+  const pub = await crypto.subtle.exportKey('raw', kp.publicKey);
+  return { myPriv: bufToB64(priv), myPub: bufToB64(pub) };
+}
+async function deriveShared(privB64, pubB64, room){
+  const priv = await crypto.subtle.importKey('pkcs8', b64ToBuf(privB64), { name:'ECDH', namedCurve:'P-256' }, false, ['deriveBits']);
+  const pub = await crypto.subtle.importKey('raw', b64ToBuf(pubB64), { name:'ECDH', namedCurve:'P-256' }, false, []);
+  const bits = await crypto.subtle.deriveBits({ name:'ECDH', public: pub }, priv, 256);
+  const hkdf = await crypto.subtle.importKey('raw', bits, 'HKDF', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey(
+    { name:'HKDF', hash:'SHA-256', salt: ENC.encode('lingtree-pair-' + room), info: ENC.encode('records') },
+    hkdf, { name:'AES-GCM', length:256 }, false, ['encrypt','decrypt']);
+  return { bits, key };
+}
+async function pairFingerprint(bits, room){
+  const digest = await crypto.subtle.digest('SHA-256', ENC.encode(room + ':' + bufToB64(bits)));
+  const hex = Array.from(new Uint8Array(digest)).map(x => x.toString(16).padStart(2,'0')).join('').toUpperCase();
+  return hex.slice(0,4) + '-' + hex.slice(4,8);
+}
+
+/* ---------- 配对流程 ---------- */
+const RELAY = () => S.sync.url.replace(/\/+$/, '');
+function pairStatus(msg, warn){
+  const el = $('#pairStatus');
+  if(!el) return;
+  el.innerHTML = msg;
+  el.className = 'set-hint' + (warn ? ' warn' : '');
+}
+function renderPairArea(mode){
+  const a = $('#pairArea');
+  if(!a) return;
+  if(mode === 'paired'){
+    a.innerHTML = '<button class="gbtn" id="pairResetBtn">解除配对，重新来</button>';
+    $('#pairResetBtn').onclick = pairReset;
+    return;
+  }
+  if(mode === 'fp'){
+    a.innerHTML = '<button class="gbtn primary" id="pairConfirmBtn">两边指纹一致 · 完成配对</button>';
+    $('#pairConfirmBtn').onclick = pairConfirm;
+    return;
+  }
+  if(mode === 'join'){
+    a.innerHTML = '<div class="set-row"><label>配对码</label><input id="pairCodeInp" maxlength="8" placeholder="对方创建后发给你的码"></div>' +
+      '<button class="gbtn primary" id="pairJoinGoBtn">加入房间</button>' +
+      '<button class="gbtn" id="pairBackBtn">返回</button>';
+    $('#pairJoinGoBtn').onclick = () => pairJoin($('#pairCodeInp').value.trim());
+    $('#pairBackBtn').onclick = () => renderPairArea('none');
+    return;
+  }
+  a.innerHTML = '<button class="gbtn primary" id="pairCreateBtn">创建房间，成为发起方</button>' +
+    '<button class="gbtn" id="pairJoinBtn">输入配对码，加入 TA 的房间</button>';
+  $('#pairCreateBtn').onclick = pairCreate;
+  $('#pairJoinBtn').onclick = () => renderPairArea('join');
+}
+async function pairCreate(){
+  if(!S.sync.url || !S.sync.room){ pairStatus('先把上面的服务器地址和房间号填好', true); return; }
+  pairStatus('生成密钥对…');
+  const kp = await genPair();
+  S.sync.role = 'host'; S.sync.myPriv = kp.myPriv; S.sync.myPub = kp.myPub; S.sync.peerPub = ''; S.sync.paired = false; S.sync.code = '';
+  saveState();
+  try{
+    const res = await fetch(RELAY() + '/api/create', {
+      method:'POST', headers:{ 'Content-Type':'application/json' },
+      body:JSON.stringify({ room:S.sync.room, pub:kp.myPub })
+    });
+    const data = await res.json();
+    if(!res.ok || !data.code) throw new Error(data.error || ('HTTP ' + res.status));
+    S.sync.code = data.code; saveState();
+    pairStatus('配对码：<b>' + data.code + '</b> · 把房间号和这个码发给对方，等 TA 加入…');
+  }catch(e){ pairStatus('创建失败：' + e.message + '（服务器连不上？）', true); }
+  pairPollReset();
+}
+async function pairJoin(code){
+  if(!S.sync.url || !S.sync.room || !code){ pairStatus('填好地址和房间号，输入对方给的配对码', true); return; }
+  pairStatus('加入中…');
+  const kp = await genPair();
+  try{
+    const res = await fetch(RELAY() + '/api/join', {
+      method:'POST', headers:{ 'Content-Type':'application/json' },
+      body:JSON.stringify({ room:S.sync.room, code, pub:kp.myPub })
+    });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+    S.sync.role = 'guest'; S.sync.myPriv = kp.myPriv; S.sync.myPub = kp.myPub; S.sync.paired = false;
+    if(data.peers && data.peers.length) S.sync.peerPub = data.peers[0].pub;
+    saveState();
+    pairStatus('已加入，正在计算配对指纹…');
+    await tryDeriveFp();
+  }catch(e){ pairStatus('加入失败：' + e.message, true); }
+  pairPollReset();
+}
+async function tryDeriveFp(){
+  if(S.sync.paired || !S.sync.peerPub || !S.sync.myPriv) return;
+  try{
+    const { bits, key } = await deriveShared(S.sync.myPriv, S.sync.peerPub, S.sync.room);
+    const fp = await pairFingerprint(bits, S.sync.room);
+    syncKey = key; syncFp = fp;
+    pairStatus('配对指纹：<b>' + fp + '</b> · 电话/视频里把指纹念给对方，两边完全一致再点确认');
+    renderPairArea('fp');
+  }catch(e){ pairStatus('指纹计算失败：' + e.message, true); }
+}
+async function pairPoll(){
+  if(S.sync.paired || !S.sync.role || !S.sync.url || !S.sync.room) return;
+  try{
+    const res = await fetch(RELAY() + '/api/peers?room=' + encodeURIComponent(S.sync.room));
+    const data = await res.json();
+    const other = (data.peers || []).find(p => p.pub !== S.sync.myPub);
+    if(other && other.pub !== S.sync.peerPub){
+      S.sync.peerPub = other.pub; saveState();
+      await tryDeriveFp();
+    }
+    else if(S.sync.role === 'host' && !other){
+      pairStatus('配对码：<b>' + (S.sync.code || '—') + '</b> · 等对方加入…');
+    }
+  }catch(e){ /* 服务器暂时连不上，下次轮询再试 */ }
+}
+function pairConfirm(){
+  if(!syncFp){ pairStatus('还没算出指纹', true); return; }
+  S.sync.paired = true; saveState();
+  pairStatus('已配对（指纹 <b>' + syncFp + '</b>）。新叶子会自动加密互传。');
+  renderPairArea('paired');
+  syncTimerReset();
+  pullFromRelay(true);
+}
+function pairReset(){
+  S.sync.role = ''; S.sync.myPriv = ''; S.sync.myPub = ''; S.sync.peerPub = ''; S.sync.paired = false; S.sync.code = '';
+  syncKey = null; syncFp = '';
+  saveState();
+  pairStatus('未配对。');
+  renderPairArea('none');
+  syncTimerReset();
+}
+let pairTimer = null;
+function pairPollReset(){
+  if(pairTimer) clearInterval(pairTimer);
+  pairTimer = null;
+  if(S.sync.url && S.sync.room && S.sync.role && !S.sync.paired){
+    pairTimer = setInterval(() => {
+      if(document.visibilityState === 'visible') pairPoll();
+    }, 3000);
+  }
+}
+
+/* ============ 同步：加密搬运 ============ */
+async function getSyncKey(){
+  if(syncKey) return syncKey;
+  if(!S.sync.paired || !S.sync.myPriv || !S.sync.peerPub) return null;
+  const { bits, key } = await deriveShared(S.sync.myPriv, S.sync.peerPub, S.sync.room);
+  syncFp = await pairFingerprint(bits, S.sync.room);
+  syncKey = key;
+  return key;
+}
+async function encRecord(r){
+  const key = await getSyncKey();
+  if(!key) return null;
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({ name:'AES-GCM', iv }, key, ENC.encode(JSON.stringify(r)));
+  const buf = new Uint8Array(iv.length + ct.byteLength);
+  buf.set(iv, 0); buf.set(new Uint8Array(ct), iv.length);
+  return B64.e(buf);
+}
+async function decRecord(c){
+  try{
+    const key = await getSyncKey();
+    if(!key) return null;
+    const buf = B64.d(c);
+    const iv = buf.slice(0, 12), ct = buf.slice(12);
+    const pt = await crypto.subtle.decrypt({ name:'AES-GCM', iv }, key, ct);
+    return JSON.parse(DEC.decode(pt));
+  }catch(e){ return null; }
+}
+function syncOn(){ return !!(S.sync.url && S.sync.room && S.sync.paired); }
+async function pushToRelay(){
+  if(!syncOn()) return;
+  const since = S.lastPushTs || 0;
+  const items = [];
+  for(const r of records){
+    if(r.t <= since) continue;
+    const c = await encRecord(r);
+    if(c) items.push({ id:r.id, t:r.t, c });
+  }
+  if(!items.length) return;
+  try{
+    const res = await fetch(RELAY() + '/api/push', {
+      method:'POST', headers:{ 'Content-Type':'application/json' },
+      body:JSON.stringify({ room:S.sync.room, items })
+    });
+    if(res.ok){ S.lastPushTs = Date.now(); saveState(); }
+  }catch(e){ syncFail('推送失败（服务器连不上）'); }
+}
+async function pullFromRelay(silent){
+  if(!syncOn()) return;
+  try{
+    const url = RELAY() + '/api/pull?room=' + encodeURIComponent(S.sync.room) + '&after=' + (S.lastPullTs || 0);
+    const res = await fetch(url);
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    let added = 0;
+    for(const it of (data.items || [])){
+      const r = await decRecord(it.c);
+      if(r && r.id === it.id){ added += await importRecords([r]); }
+    }
+    S.lastPullTs = Date.now(); saveState();
+    if(added){ renderTree(); renderMems(); }
+    syncHint('已配对 · ' + (silent ? '自动同步正常' : '同步完成，新增 ' + added + ' 片叶子'));
+  }catch(e){
+    if(!silent) syncFail('拉取失败（服务器连不上）');
+  }
+}
+function syncHint(msg){
+  const el = $('#syncHint');
+  if(!el) return;
+  el.textContent = msg || (syncOn() ? '已配对。每 30 秒自动交换新叶子。' : '未配置。纯本地模式下，用「导出记忆」把文件发给对方。');
+  el.className = 'set-hint';
+}
+function syncFail(msg){
+  const el = $('#syncHint');
+  if(!el) return;
+  el.textContent = msg + '。检查服务器地址、房间号是否一致。';
+  el.className = 'set-hint warn';
+}
+async function syncConfigured(){
+  if(!S.sync.url || !S.sync.room){ syncHint(); return; }
+  syncHint('检测服务器中…');
+  try{
+    const res = await fetch(RELAY() + '/health');
+    if(res.ok){
+      if(S.sync.paired){ syncHint('已配对 · 服务器可达。每 30 秒自动交换新叶子。'); pullFromRelay(true); }
+      else { syncHint('服务器可达 · 在上面完成线上配对（不需要见面换密钥）'); pairPollReset(); }
+    }
+    else syncFail('服务器返回异常');
+  }catch(e){ syncFail('服务器连不上'); }
+}
+let syncTimer = null;
+function syncTimerReset(){
+  if(syncTimer) clearInterval(syncTimer);
+  syncTimer = null;
+  if(syncOn()){
+    syncTimer = setInterval(() => {
+      if(document.visibilityState === 'visible') pullFromRelay(true);
+    }, 30000);
+  }
+}
+/* ::JS3:: */
+/* ============ 页面切换 ============ */
+function setTab(page){
+  document.querySelectorAll('.tabbar .tab').forEach(t => t.classList.toggle('on', t.dataset.page === page));
+  ['page-tree','page-mem','page-set'].forEach(p => $('#' + p).classList.toggle('hidden', p !== page));
+  if(page === 'page-set') fillSettings();
+}
+function fillSettings(){
+  $('#setName').value = S.identity.name || '';
+  renderAvaPick($('#setAvas'), S.identity.ava, a => { S.identity.ava = a; saveState(); applyIdentity(); });
+  $('#setUrl').value = S.sync.url; $('#setRoom').value = S.sync.room;
+  exportHint(); syncHint();
+  if(S.sync.paired){
+    pairStatus('已配对（指纹 ' + (syncFp || '—') + '）。');
+    renderPairArea('paired');
+    if(!syncFp) getSyncKey().then(() => { if(syncFp) pairStatus('已配对（指纹 <b>' + syncFp + '</b>）。'); });
+  }else if(S.sync.role){
+    pairStatus(S.sync.role === 'host' ? '配对码：<b>' + (S.sync.code || '—') + '</b> · 等对方加入…' : '加入成功，等待指纹计算…');
+    renderPairArea('none');
+    pairPollReset();
+    if(S.sync.peerPub) tryDeriveFp();
+  }else{
+    pairStatus('未配对。线上配对：一个人「创建房间」把配对码发给对方；对方输入码加入，两人在电话里核对指纹一致。');
+    renderPairArea('none');
+  }
+}
+
+/* ============ 事件与初始化 ============ */
+function wire(){
+  $('#loginGo').onclick = doLogin;
+  $('#loginName').addEventListener('keydown', e => { if(e.key === 'Enter') doLogin(); });
+  $('#advToggle').onclick = () => $('#advBox').classList.toggle('hidden');
+
+  $('#tbSetBtn').onclick = () => setTab('page-set');
+  $('#tbAva').onclick = () => setTab('page-set');
+  $('#tbLogoutBtn').onclick = () => {
+    if(confirm('退出登录？你的记忆都安全存在本机，重新登录就能看到。')) logout();
+  };
+  document.querySelectorAll('.tabbar .tab[data-page]').forEach(t => t.onclick = () => setTab(t.dataset.page));
+  $('#writeBtn').onclick = openCompose;
+  $('#missBtn').onclick = sendPulse;
+  $('#randBtn').onclick = () => { if(records.length) openRec(records[Math.floor(Math.random() * records.length)]); };
+
+  $('#photoBtn').onclick = () => $('#photoFile').click();
+  $('#photoFile').onchange = () => {
+    const f = $('#photoFile').files[0];
+    if(!f) return;
+    shrinkImg(f, 1280, dataUrl => {
+      pendingPhoto = dataUrl;
+      $('#composeImg').src = dataUrl;
+      $('#composePrev').classList.remove('hidden');
+    });
+    $('#photoFile').value = '';
+  };
+  $('#voiceBtn').onclick = toggleVoice;
+  $('#saveBtn').onclick = doSave;
+  $('#maskCompose').onclick = closeCompose;
+
+  $('#recClose').onclick = () => { $('#maskRec').classList.add('hidden'); $('#sheetRec').classList.add('hidden'); };
+  $('#maskRec').onclick = () => { $('#maskRec').classList.add('hidden'); $('#sheetRec').classList.add('hidden'); };
+
+  $('#setName').addEventListener('input', () => {
+    S.identity.name = $('#setName').value.trim() || S.identity.name;
+    saveState(); applyIdentity(); renderMems();
+  });
+  [['setUrl','url'],['setRoom','room']].forEach(([id, field]) => {
+    $('#' + id).addEventListener('change', () => {
+      S.sync[field] = $('#' + id).value.trim();
+      syncKey = null;
+      saveState(); syncTimerReset(); syncConfigured();
+    });
+  });
+  $('#syncNowBtn').onclick = async () => { await pushToRelay(); await pullFromRelay(false); };
+  $('#exportBtn').onclick = doExport;
+  $('#importBtn').onclick = () => $('#importFile').click();
+  $('#importFile').onchange = () => { const f = $('#importFile').files[0]; if(f) doImport(f); $('#importFile').value = ''; };
+  $('#logoutBtn').onclick = logout;
+}
+
+(async function init(){
+  loadState();
+  // 版本更新自动读取旧存档（铁律：一条不丢，原样合并）
+  await migrateLegacy();
+  try{ db = await dbOpen(); records = (await dbAll()).sort((a,b) => a.t < b.t ? -1 : 1); }
+  catch(e){ console.error('indexedDB 打开失败：', e); }
+  wire();
+  if(S.identity.name && S.identity.name.trim()){
+    $('#scr-login').classList.add('hidden');
+    $('#scr-main').classList.remove('hidden');
+    applyIdentity();
+    renderTree();
+    renderMems();
+    syncConfigured();
+    syncTimerReset();
+  }else{
+    showLogin();
+  }
+  if('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')){
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  }
+})();
+/* ::JS4:: */
+</script>
+</body>
+</html>
