@@ -9,9 +9,9 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="SOUL TREE">
-<link rel="manifest" href="./manifest.webmanifest?v=6">
-<link rel="icon" type="image/png" href="./icons/icon-192.png?v=6">
-<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png?v=6">
+<link rel="manifest" href="./manifest.webmanifest?v=7">
+<link rel="icon" type="image/png" href="./icons/icon-192.png?v=7">
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png?v=7">
 <style>
 /* ============ SOUL TREE 设计令牌（Codex UI 体系 v1.0） ============ */
 :root{
@@ -243,7 +243,7 @@ body::before{content:'';position:fixed;inset:-12%;pointer-events:none;opacity:.4
         <div id="advBox" class="hidden" style="margin-top:10px">
           <div class="set-row"><label>服务器地址</label><input id="loginUrl" placeholder="https://你的服务器:端口"></div>
           <div class="set-row"><label>房间号</label><input id="loginRoom" placeholder="两个人约定同一个"></div>
-          <div class="set-hint">没有服务器就留空，纯本地使用。两个人相隔两地时：填好地址和房间号，进入后在「设置 → 同步」里线上配对（不用见面换密钥）。</div>
+          <div class="set-hint">同步走「设置 → 同步」里的 GitHub 邮箱（免服务器）。下面的地址/房间号仅供自建中继的高级用户。</div>
         </div>
         <button class="gbtn primary" id="loginGo" style="margin-top:16px">进入</button>
         <div class="set-hint" style="text-align:center;margin-top:10px">记忆只追加、永不删除 · 一键导出 · 软件可以一直换，记忆永远在</div>
@@ -294,12 +294,23 @@ body::before{content:'';position:fixed;inset:-12%;pointer-events:none;opacity:.4
         <div class="set-hint">改动立即生效。可选两个预设头像，或上传自己的照片。</div>
       </div>
       <div class="set-group">
-        <h3>同步（可选，线上配对）</h3>
-        <div class="set-row"><label>服务器地址</label><input id="setUrl" placeholder="留空 = 纯本地"></div>
+        <h3>同步（免服务器 · GitHub 邮箱）</h3>
+        <div class="set-row"><label>方式</label>
+          <select id="setMode" style="flex:1;min-height:44px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--glass-soft);color:var(--text);padding:0 10px;font-size:14px;font-family:var(--font);outline:none">
+            <option value="github">GitHub 邮箱（推荐，免服务器）</option>
+            <option value="relay">自建中继（高级）</option>
+          </select></div>
+        <div id="ghSyncFields">
+          <div class="set-row"><label>仓库</label><input id="setGhRepo" placeholder="owner/repo"></div>
+          <div class="set-row"><label>访问令牌</label><input id="setGhToken" type="password" placeholder="ghp_…（只对邮箱仓库有效）"></div>
+        </div>
+        <div id="relaySyncFields" class="hidden">
+          <div class="set-row"><label>服务器地址</label><input id="setUrl" placeholder="http://IP:端口"></div>
+        </div>
         <div class="set-row"><label>房间号</label><input id="setRoom" placeholder="两个人约定同一个"></div>
         <div class="set-hint" id="pairStatus">未配对。</div>
         <div id="pairArea"></div>
-        <div class="set-hint" id="syncHint">未配置。纯本地模式下，用「导出记忆」把文件发给对方。</div>
+        <div class="set-hint" id="syncHint">填好仓库、令牌、房间号，然后创建 / 加入房间完成配对。</div>
         <button class="gbtn" id="syncNowBtn">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-2.6-6.3M21 3v6h-6"/></svg>
           立即同步一次</button>
@@ -398,7 +409,7 @@ function hashStr(s){ let h=2166136261; for(let i=0;i<s.length;i++){ h^=s.charCod
 /* ---------- 状态 ---------- */
 const DEF = {
   identity: { name:'', ava:'assets/avatar-1.png' },
-  sync: { url:'', room:'', role:'', myPriv:'', myPub:'', peerPub:'', paired:false },
+  sync: { mode:'github', repo:'Cao-yifu/soul-tree-mailbox', token:'', url:'', room:'', role:'', myPriv:'', myPub:'', peerPub:'', paired:false },
   seed: Math.floor(Math.random()*1e9),
   lastExport: 0,
   lastPullTs: 0,
@@ -959,6 +970,52 @@ async function pairFingerprint(bits, room){
 
 /* ---------- 配对流程 ---------- */
 const RELAY = () => S.sync.url.replace(/\/+$/, '');
+const GH_API = 'https://api.github.com';
+function ghMode(){ return S.sync.mode !== 'relay'; }
+function syncFieldsReady(){
+  if(ghMode()) return !!(S.sync.repo && S.sync.token && S.sync.room);
+  return !!(S.sync.url && S.sync.room);
+}
+function metaPath(){ return 'rooms/' + encodeURIComponent(S.sync.room) + '.json'; }
+function boxPath(){ return 'mailbox/' + encodeURIComponent(S.sync.room) + '.json'; }
+function randCode(){ const C = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s = '';
+  for(let i = 0; i < 6; i++) s += C[Math.floor(Math.random() * C.length)]; return s; }
+function randPid(){ return Array.from(crypto.getRandomValues(new Uint8Array(6))).map(b => b.toString(16).padStart(2,'0')).join(''); }
+function b64u(s){ return btoa(unescape(encodeURIComponent(s))); }
+function ub64(s){ return decodeURIComponent(escape(atob(String(s).replace(/\s/g,'')))); }
+/* GitHub 邮箱：私有仓库当邮局，只存密文 */
+async function ghReq(method, path, body){
+  const res = await fetch(GH_API + path, {
+    method, headers: { 'Authorization':'Bearer ' + S.sync.token, 'Accept':'application/vnd.github+json', 'Content-Type':'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body)
+  });
+  if(!res.ok) throw new Error('GitHub ' + res.status);
+  const txt = await res.text();
+  return txt ? JSON.parse(txt) : {};
+}
+async function ghReadFile(fn){
+  try{
+    const d = await ghReq('GET', '/repos/' + S.sync.repo + '/contents/' + fn);
+    return { content: JSON.parse(ub64(d.content)), sha: d.sha };
+  }catch(e){
+    if(String(e.message).indexOf('404') >= 0) return { content:null, sha:null };
+    throw e;
+  }
+}
+async function ghUpsert(fn, newData, mergeFn){
+  for(let i = 0; i < 5; i++){
+    const cur = await ghReadFile(fn);
+    const obj = mergeFn ? mergeFn(cur.content, newData) : newData;
+    try{
+      await ghReq('PUT', '/repos/' + S.sync.repo + '/contents/' + fn,
+        { message:'sync', content: b64u(JSON.stringify(obj)), sha: cur.sha });
+      return obj;
+    }catch(e){
+      if(String(e.message).indexOf('409') < 0) throw e; // 并发冲突：重读再试
+    }
+  }
+  throw new Error('邮箱写入冲突，稍后再试');
+}
 function pairStatus(msg, warn){
   const el = $('#pairStatus');
   if(!el) return;
@@ -992,39 +1049,65 @@ function renderPairArea(mode){
   $('#pairJoinBtn').onclick = () => renderPairArea('join');
 }
 async function pairCreate(){
-  if(!S.sync.url || !S.sync.room){ pairStatus('先把上面的服务器地址和房间号填好', true); return; }
+  if(!syncFieldsReady()){ pairStatus('先把上面同步方式需要的字段填好', true); return; }
   pairStatus('生成密钥对…');
   const kp = await genPair();
   S.sync.role = 'host'; S.sync.myPriv = kp.myPriv; S.sync.myPub = kp.myPub; S.sync.peerPub = ''; S.sync.paired = false; S.sync.code = '';
   saveState();
   try{
-    const res = await fetch(RELAY() + '/api/create', {
-      method:'POST', headers:{ 'Content-Type':'application/json' },
-      body:JSON.stringify({ room:S.sync.room, pub:kp.myPub })
-    });
-    const data = await res.json();
-    if(!res.ok || !data.code) throw new Error(data.error || ('HTTP ' + res.status));
-    S.sync.code = data.code; saveState();
-    pairStatus('配对码：<b>' + data.code + '</b> · 把房间号和这个码发给对方，等 TA 加入…');
-  }catch(e){ pairStatus('创建失败：' + e.message + '（服务器连不上？）', true); }
+    if(ghMode()){
+      const code = randCode();
+      await ghUpsert(metaPath(), { code, participants:[{ pid:randPid(), pub:kp.myPub, ts:Date.now() }] },
+        (cur, nd) => { if(cur) throw new Error('房间已存在，让对方直接输入配对码加入'); return nd; });
+      S.sync.code = code; saveState();
+      pairStatus('配对码：<b>' + code + '</b> · 把房间号和这个码发给对方，等 TA 加入…');
+    }else{
+      const res = await fetch(RELAY() + '/api/create', {
+        method:'POST', headers:{ 'Content-Type':'application/json' },
+        body:JSON.stringify({ room:S.sync.room, pub:kp.myPub })
+      });
+      const data = await res.json();
+      if(!res.ok || !data.code) throw new Error(data.error || ('HTTP ' + res.status));
+      S.sync.code = data.code; saveState();
+      pairStatus('配对码：<b>' + data.code + '</b> · 把房间号和这个码发给对方，等 TA 加入…');
+    }
+  }catch(e){ pairStatus('创建失败：' + e.message + (ghMode() ? '（令牌不对？）' : '（服务器连不上？）'), true); }
   pairPollReset();
 }
 async function pairJoin(code){
-  if(!S.sync.url || !S.sync.room || !code){ pairStatus('填好地址和房间号，输入对方给的配对码', true); return; }
+  if(!syncFieldsReady() || !code){ pairStatus('填好同步字段，输入对方给的配对码', true); return; }
   pairStatus('加入中…');
   const kp = await genPair();
   try{
-    const res = await fetch(RELAY() + '/api/join', {
-      method:'POST', headers:{ 'Content-Type':'application/json' },
-      body:JSON.stringify({ room:S.sync.room, code, pub:kp.myPub })
-    });
-    const data = await res.json();
-    if(!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
-    S.sync.role = 'guest'; S.sync.myPriv = kp.myPriv; S.sync.myPub = kp.myPub; S.sync.paired = false;
-    if(data.peers && data.peers.length) S.sync.peerPub = data.peers[0].pub;
-    saveState();
-    pairStatus('已加入，正在计算配对指纹…');
-    await tryDeriveFp();
+    if(ghMode()){
+      await ghUpsert(metaPath(), { participant:{ pid:randPid(), pub:kp.myPub, ts:Date.now() }, code },
+        (cur, nd) => {
+          if(!cur) throw new Error('房间不存在，先让对方创建');
+          if(cur.code !== nd.code) throw new Error('配对码不对');
+          if((cur.participants || []).length >= 2) throw new Error('房间已有两个人');
+          cur.participants.push(nd.participant);
+          return cur;
+        });
+      S.sync.role = 'guest'; S.sync.myPriv = kp.myPriv; S.sync.myPub = kp.myPub; S.sync.paired = false;
+      const meta = await ghReadFile(metaPath());
+      const other = ((meta.content && meta.content.participants) || []).find(p => p.pub !== kp.myPub);
+      if(other) S.sync.peerPub = other.pub;
+      saveState();
+      pairStatus('已加入，正在计算配对指纹…');
+      await tryDeriveFp();
+    }else{
+      const res = await fetch(RELAY() + '/api/join', {
+        method:'POST', headers:{ 'Content-Type':'application/json' },
+        body:JSON.stringify({ room:S.sync.room, code, pub:kp.myPub })
+      });
+      const data = await res.json();
+      if(!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+      S.sync.role = 'guest'; S.sync.myPriv = kp.myPriv; S.sync.myPub = kp.myPub; S.sync.paired = false;
+      if(data.peers && data.peers.length) S.sync.peerPub = data.peers[0].pub;
+      saveState();
+      pairStatus('已加入，正在计算配对指纹…');
+      await tryDeriveFp();
+    }
   }catch(e){ pairStatus('加入失败：' + e.message, true); }
   pairPollReset();
 }
@@ -1039,11 +1122,18 @@ async function tryDeriveFp(){
   }catch(e){ pairStatus('指纹计算失败：' + e.message, true); }
 }
 async function pairPoll(){
-  if(S.sync.paired || !S.sync.role || !S.sync.url || !S.sync.room) return;
+  if(S.sync.paired || !S.sync.role || !syncFieldsReady()) return;
   try{
-    const res = await fetch(RELAY() + '/api/peers?room=' + encodeURIComponent(S.sync.room));
-    const data = await res.json();
-    const other = (data.peers || []).find(p => p.pub !== S.sync.myPub);
+    let peers = [];
+    if(ghMode()){
+      const meta = await ghReadFile(metaPath());
+      peers = (meta.content && meta.content.participants) || [];
+    }else{
+      const res = await fetch(RELAY() + '/api/peers?room=' + encodeURIComponent(S.sync.room));
+      const data = await res.json();
+      peers = data.peers || [];
+    }
+    const other = peers.find(p => p.pub !== S.sync.myPub);
     if(other && other.pub !== S.sync.peerPub){
       S.sync.peerPub = other.pub; saveState();
       await tryDeriveFp();
@@ -1051,7 +1141,7 @@ async function pairPoll(){
     else if(S.sync.role === 'host' && !other){
       pairStatus('配对码：<b>' + (S.sync.code || '—') + '</b> · 等对方加入…');
     }
-  }catch(e){ /* 服务器暂时连不上，下次轮询再试 */ }
+  }catch(e){ /* 暂时连不上，下次轮询再试 */ }
 }
 function pairConfirm(){
   if(!syncFp){ pairStatus('还没算出指纹', true); return; }
@@ -1073,7 +1163,7 @@ let pairTimer = null;
 function pairPollReset(){
   if(pairTimer) clearInterval(pairTimer);
   pairTimer = null;
-  if(S.sync.url && S.sync.room && S.sync.role && !S.sync.paired){
+  if(S.sync.room && S.sync.role && !S.sync.paired && syncFieldsReady()){
     pairTimer = setInterval(() => {
       if(document.visibilityState === 'visible') pairPoll();
     }, 3000);
@@ -1108,7 +1198,11 @@ async function decRecord(c){
     return JSON.parse(DEC.decode(pt));
   }catch(e){ return null; }
 }
-function syncOn(){ return !!(S.sync.url && S.sync.room && S.sync.paired); }
+function syncOn(){
+  if(!S.sync.room || !S.sync.paired) return false;
+  if(ghMode()) return !!(S.sync.repo && S.sync.token);
+  return !!S.sync.url;
+}
 async function pushToRelay(){
   if(!syncOn()) return;
   const since = S.lastPushTs || 0;
@@ -1120,20 +1214,35 @@ async function pushToRelay(){
   }
   if(!items.length) return;
   try{
-    const res = await fetch(RELAY() + '/api/push', {
-      method:'POST', headers:{ 'Content-Type':'application/json' },
-      body:JSON.stringify({ room:S.sync.room, items })
-    });
-    if(res.ok){ S.lastPushTs = Date.now(); saveState(); }
-  }catch(e){ syncFail('推送失败（服务器连不上）'); }
+    if(ghMode()){
+      await ghUpsert(boxPath(), items, (cur, add) => {
+        const map = (cur && cur.items) || {};
+        add.forEach(it => { if(!map[it.id]) map[it.id] = it; });
+        return { items: map };
+      });
+    }else{
+      const res = await fetch(RELAY() + '/api/push', {
+        method:'POST', headers:{ 'Content-Type':'application/json' },
+        body:JSON.stringify({ room:S.sync.room, items })
+      });
+      if(!res.ok) throw new Error('HTTP ' + res.status);
+    }
+    S.lastPushTs = Date.now(); saveState();
+  }catch(e){ syncFail('推送失败（' + (ghMode() ? 'GitHub 连不上或令牌不对' : '服务器连不上') + '）'); }
 }
 async function pullFromRelay(silent){
   if(!syncOn()) return;
   try{
-    const url = RELAY() + '/api/pull?room=' + encodeURIComponent(S.sync.room) + '&after=' + (S.lastPullTs || 0);
-    const res = await fetch(url);
-    if(!res.ok) throw new Error('HTTP ' + res.status);
-    const data = await res.json();
+    let data;
+    if(ghMode()){
+      const box = await ghReadFile(boxPath());
+      data = { items: Object.values((box.content && box.content.items) || {}) };
+    }else{
+      const url = RELAY() + '/api/pull?room=' + encodeURIComponent(S.sync.room) + '&after=' + (S.lastPullTs || 0);
+      const res = await fetch(url);
+      if(!res.ok) throw new Error('HTTP ' + res.status);
+      data = await res.json();
+    }
     let added = 0;
     for(const it of (data.items || [])){
       const r = await decRecord(it.c);
@@ -1143,13 +1252,13 @@ async function pullFromRelay(silent){
     if(added){ renderTree(); renderMems(); }
     syncHint('已配对 · ' + (silent ? '自动同步正常' : '同步完成，新增 ' + added + ' 片叶子'));
   }catch(e){
-    if(!silent) syncFail('拉取失败（服务器连不上）');
+    if(!silent) syncFail('拉取失败（' + (ghMode() ? 'GitHub 连不上或令牌不对' : '服务器连不上') + '）');
   }
 }
 function syncHint(msg){
   const el = $('#syncHint');
   if(!el) return;
-  el.textContent = msg || (syncOn() ? '已配对。每 30 秒自动交换新叶子。' : '未配置。纯本地模式下，用「导出记忆」把文件发给对方。');
+  el.textContent = msg || (syncOn() ? '已配对。每 30 秒自动交换新叶子。' : '填好仓库、令牌、房间号后配对；或保持纯本地，用「导出记忆」互传。');
   el.className = 'set-hint';
 }
 function syncFail(msg){
@@ -1159,13 +1268,18 @@ function syncFail(msg){
   el.className = 'set-hint warn';
 }
 async function syncConfigured(){
-  if(!S.sync.url || !S.sync.room){ syncHint(); return; }
+  if(!syncFieldsReady()){ syncHint(); return; }
+  if(ghMode()){
+    if(S.sync.paired){ syncHint('已配对 · GitHub 邮箱可达。每 30 秒自动交换新叶子。'); pullFromRelay(true); }
+    else { syncHint('配置就绪 · 在上面完成线上配对'); pairPollReset(); }
+    return;
+  }
   syncHint('检测服务器中…');
   try{
     const res = await fetch(RELAY() + '/health');
     if(res.ok){
       if(S.sync.paired){ syncHint('已配对 · 服务器可达。每 30 秒自动交换新叶子。'); pullFromRelay(true); }
-      else { syncHint('服务器可达 · 在上面完成线上配对（不需要见面换密钥）'); pairPollReset(); }
+      else { syncHint('服务器可达 · 在上面完成线上配对'); pairPollReset(); }
     }
     else syncFail('服务器返回异常');
   }catch(e){ syncFail('服务器连不上'); }
@@ -1190,7 +1304,11 @@ function setTab(page){
 function fillSettings(){
   $('#setName').value = S.identity.name || '';
   renderAvaPick($('#setAvas'), S.identity.ava, a => { S.identity.ava = a; saveState(); applyIdentity(); });
+  $('#setMode').value = S.sync.mode || 'github';
+  $('#setGhRepo').value = S.sync.repo || '';
+  $('#setGhToken').value = S.sync.token || '';
   $('#setUrl').value = S.sync.url; $('#setRoom').value = S.sync.room;
+  syncModeUI();
   exportHint(); syncHint();
   if(S.sync.paired){
     pairStatus('已配对（指纹 ' + (syncFp || '—') + '）。');
@@ -1207,6 +1325,10 @@ function fillSettings(){
   }
 }
 
+function syncModeUI(){
+  $('#ghSyncFields').classList.toggle('hidden', S.sync.mode !== 'github');
+  $('#relaySyncFields').classList.toggle('hidden', S.sync.mode !== 'relay');
+}
 /* ============ 事件与初始化 ============ */
 function wire(){
   $('#loginGo').onclick = doLogin;
@@ -1245,7 +1367,12 @@ function wire(){
     S.identity.name = $('#setName').value.trim() || S.identity.name;
     saveState(); applyIdentity(); renderMems();
   });
-  [['setUrl','url'],['setRoom','room']].forEach(([id, field]) => {
+  $('#setMode').addEventListener('change', () => {
+    S.sync.mode = $('#setMode').value;
+    syncKey = null;
+    saveState(); syncModeUI(); syncTimerReset(); syncConfigured();
+  });
+  [['setGhRepo','repo'],['setGhToken','token'],['setUrl','url'],['setRoom','room']].forEach(([id, field]) => {
     $('#' + id).addEventListener('change', () => {
       S.sync[field] = $('#' + id).value.trim();
       syncKey = null;
